@@ -9,5 +9,10 @@
 			<_long>Cycles through desktop panel focus.</_long>
 			<default>&lt;ctrl&gt; &lt;alt&gt; KEY_TAB</default>
 		</option>
+		<option name="deactivate" type="activator">
+			<_short>Deactivate</_short>
+			<_long>Deactivates panel focus.</_long>
+			<default>&lt;ctrl&gt; &lt;alt&gt; KEY_ESC</default>
+		</option>
 	</plugin>
 </wayfire>
