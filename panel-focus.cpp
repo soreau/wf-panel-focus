@@ -90,7 +90,10 @@ class wayfire_panel_focus : public wf::plugin_interface_t
 
     wf::signal::connection_t<wf::view_unmapped_signal> on_view_unmapped = [=] (wf::view_unmapped_signal *ev)
     {
-		toplevel_focus_view = wf::get_core().seat->get_active_view();
+        if (ev->view == wf::get_core().seat->get_active_view())
+        {
+            toplevel_focus_view = nullptr;
+        }
     };
 
     wf::ipc_activator_t::handler_t cycle_panels = [=] (wf::output_t *output, wayfire_view)
