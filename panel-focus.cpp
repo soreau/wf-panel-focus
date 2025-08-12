@@ -25,6 +25,7 @@
 #include <wayfire/plugin.hpp>
 #include <wayfire/toplevel-view.hpp>
 #include <wayfire/view-helpers.hpp>
+#include <wayfire/view-transform.hpp>
 #include <linux/input-event-codes.h>
 #include <wayfire/signal-definitions.hpp>
 #include <wayfire/plugins/ipc/ipc-activator.hpp>
@@ -32,6 +33,25 @@
 
 namespace wf
 {
+namespace panel_focus
+{
+const std::string panel_focus_transformer_name = "panel_focus_transformer";
+class panel_focus_view : public wf::scene::view_2d_transformer_t
+{
+  public:
+
+    panel_focus_view(wayfire_view view) : wf::scene::view_2d_transformer_t(view)
+    {}
+
+    wf::keyboard_focus_node_t keyboard_refocus(wf::output_t *output) override
+    {
+        return {};
+    }
+
+    virtual ~panel_focus_view()
+    {}
+};
+
 class wayfire_panel_focus : public wf::plugin_interface_t
 {
     wf::ipc_activator_t cycle{"panel-focus/cycle"};
@@ -47,7 +67,47 @@ class wayfire_panel_focus : public wf::plugin_interface_t
         wf::get_core().connect(&on_key_event);
         wf::get_core().connect(&on_view_mapped);
         wf::get_core().connect(&on_view_unmapped);
-        wf::get_core().connect(&on_button_event);
+        wf::get_core().connect(&on_view_focus_request);
+
+        for (auto& view : wf::get_core().get_all_views())
+        {
+            if (view->role == wf::VIEW_ROLE_DESKTOP_ENVIRONMENT &&
+                wf::get_view_layer(view) > wf::scene::layer::WORKSPACE)
+            {
+                ensure_transformer(view);
+            }
+        }
+    }
+
+    void pop_transformer(wayfire_view view)
+    {
+        if (view->get_transformed_node()->get_transformer(panel_focus_transformer_name))
+        {
+            view->get_transformed_node()->rem_transformer(panel_focus_transformer_name);
+        }
+    }
+
+    void remove_transformers()
+    {
+        for (auto& view : wf::get_core().get_all_views())
+        {
+            pop_transformer(view);
+        }
+    }
+
+    std::shared_ptr<wf::panel_focus::panel_focus_view> ensure_transformer(wayfire_view view)
+    {
+        auto tmgr = view->get_transformed_node();
+        if (auto tr = tmgr->get_transformer<wf::panel_focus::panel_focus_view>(panel_focus_transformer_name))
+        {
+            return tr;
+        }
+
+        auto node = std::make_shared<wf::panel_focus::panel_focus_view>(view);
+        tmgr->add_transformer(node, wf::TRANSFORMER_2D, panel_focus_transformer_name);
+        auto tr = tmgr->get_transformer<wf::panel_focus::panel_focus_view>(panel_focus_transformer_name);
+
+        return tr;
     }
 
     wf::signal::connection_t<wf::input_event_signal<wlr_keyboard_key_event>> on_key_event =
@@ -69,13 +129,12 @@ class wayfire_panel_focus : public wf::plugin_interface_t
         }
     };
 
-    wf::signal::connection_t<wf::input_event_signal<wlr_pointer_button_event>> on_button_event =
-        [=] (wf::input_event_signal<wlr_pointer_button_event> *ev)
+    wf::signal::connection_t<wf::view_focus_request_signal> on_view_focus_request =
+        [=] (wf::view_focus_request_signal *ev)
     {
-		auto view = wf::get_core().seat->get_active_view();
-        if (view->role == wf::VIEW_ROLE_DESKTOP_ENVIRONMENT)
+        if (ev->view && ev->view->role == wf::VIEW_ROLE_DESKTOP_ENVIRONMENT)
         {
-            wf::get_core().seat->focus_view(toplevel_focus_view);
+            ev->carried_out = true;
         }
     };
 
@@ -86,6 +145,12 @@ class wayfire_panel_focus : public wf::plugin_interface_t
         {
             toplevel_focus_view = ev->view;
         }
+        if (ev->view->role == wf::VIEW_ROLE_DESKTOP_ENVIRONMENT &&
+            wf::get_view_layer(ev->view) > wf::scene::layer::WORKSPACE)
+        {
+            ensure_transformer(ev->view);
+            wf::get_core().seat->focus_view(toplevel_focus_view);
+        }
     };
 
     wf::signal::connection_t<wf::view_unmapped_signal> on_view_unmapped = [=] (wf::view_unmapped_signal *ev)
@@ -94,6 +159,7 @@ class wayfire_panel_focus : public wf::plugin_interface_t
         {
             toplevel_focus_view = nullptr;
         }
+        pop_transformer(ev->view);
     };
 
     wf::ipc_activator_t::handler_t cycle_panels = [=] (wf::output_t *output, wayfire_view)
@@ -120,8 +186,10 @@ class wayfire_panel_focus : public wf::plugin_interface_t
                 wf::get_view_layer(view) > wf::scene::layer::WORKSPACE &&
                 focus_view_found)
             {
+                pop_transformer(view);
                 wf::get_core().seat->focus_view(view);
                 current_focus_view = view;
+                ensure_transformer(view);
                 break;
             }
         }
@@ -132,8 +200,10 @@ class wayfire_panel_focus : public wf::plugin_interface_t
                 if (view->role == wf::VIEW_ROLE_DESKTOP_ENVIRONMENT &&
                     wf::get_view_layer(view) > wf::scene::layer::WORKSPACE)
                 {
+                    pop_transformer(view);
                     wf::get_core().seat->focus_view(view);
                     current_focus_view = view;
+                    ensure_transformer(view);
                     break;
                 }
             }
@@ -147,12 +217,14 @@ class wayfire_panel_focus : public wf::plugin_interface_t
 
     void fini() override
     {
+        remove_transformers();
         on_key_event.disconnect();
         on_view_mapped.disconnect();
         on_view_unmapped.disconnect();
-        on_button_event.disconnect();
+        on_view_focus_request.disconnect();
     }
 };
 }
+}
 
-DECLARE_WAYFIRE_PLUGIN(wf::wayfire_panel_focus);
+DECLARE_WAYFIRE_PLUGIN(wf::panel_focus::wayfire_panel_focus);
