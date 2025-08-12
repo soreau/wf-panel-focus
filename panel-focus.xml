@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<wayfire>
+	<plugin name="panel-focus">
+		<_short>Panel Focus</_short>
+		<_long>A plugin to cycle through desktop panels.</_long>
+		<category>Desktop</category>
+		<option name="cycle" type="activator">
+			<_short>Cycle</_short>
+			<_long>Cycles through desktop panel focus.</_long>
+			<default>&lt;ctrl&gt; &lt;alt&gt; KEY_TAB</default>
+		</option>
+	</plugin>
+</wayfire>
