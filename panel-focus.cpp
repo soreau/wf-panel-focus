@@ -57,7 +57,7 @@ class wayfire_panel_focus : public wf::plugin_interface_t
 {
     wf::ipc_activator_t cycle{"panel-focus/cycle"};
     wf::ipc_activator_t deactivate{"panel-focus/deactivate"};
-    wf::view_matcher_t panel_focus_match{"panel-focus/panel_focus_match"};
+    wf::view_matcher_t panel_focus_exclusions{"panel-focus/panel_focus_exclusions"};
     wayfire_view current_focus_view, toplevel_focus_view;
     bool panel_focus_active = false;
 
@@ -76,7 +76,7 @@ class wayfire_panel_focus : public wf::plugin_interface_t
         {
             if (view->role == wf::VIEW_ROLE_DESKTOP_ENVIRONMENT &&
                 wf::get_view_layer(view) > wf::scene::layer::WORKSPACE &&
-                panel_focus_match.matches(view))
+                !panel_focus_exclusions.matches(view))
             {
                 ensure_transformer(view);
             }
@@ -174,7 +174,7 @@ class wayfire_panel_focus : public wf::plugin_interface_t
             }
             if (view->role == wf::VIEW_ROLE_DESKTOP_ENVIRONMENT &&
                 wf::get_view_layer(view) > wf::scene::layer::WORKSPACE &&
-                focus_view_found && panel_focus_match.matches(view))
+                focus_view_found && !panel_focus_exclusions.matches(view))
             {
                 pop_transformer(view);
                 wf::get_core().seat->focus_view(view);
@@ -190,7 +190,7 @@ class wayfire_panel_focus : public wf::plugin_interface_t
             {
                 if (view->role == wf::VIEW_ROLE_DESKTOP_ENVIRONMENT &&
                     wf::get_view_layer(view) > wf::scene::layer::WORKSPACE &&
-                    panel_focus_match.matches(view))
+                    !panel_focus_exclusions.matches(view))
                 {
                     pop_transformer(view);
                     wf::get_core().seat->focus_view(view);

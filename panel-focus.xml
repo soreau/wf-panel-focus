@@ -14,10 +14,10 @@
 			<_long>Deactivates panel focus.</_long>
 			<default>&lt;ctrl&gt; &lt;alt&gt; KEY_ESC</default>
 		</option>
-		<option name="panel_focus_match" type="string">
-			<_short>Panel Focus Views</_short>
-			<_long>Criteria for views that the cycle activator will focus.</_long>
-			<default></default>
+		<option name="panel_focus_exclusions" type="string">
+			<_short>Exclude Panel Focus Views</_short>
+			<_long>Criteria for views that the cycle activator will not focus.</_long>
+			<default>app_id is "panel"</default>
 		</option>
 	</plugin>
 </wayfire>
