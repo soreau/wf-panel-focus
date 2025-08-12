@@ -67,7 +67,6 @@ class wayfire_panel_focus : public wf::plugin_interface_t
         wf::get_core().connect(&on_key_event);
         wf::get_core().connect(&on_view_mapped);
         wf::get_core().connect(&on_view_unmapped);
-        wf::get_core().connect(&on_view_focus_request);
 
         for (auto& view : wf::get_core().get_all_views())
         {
@@ -126,15 +125,6 @@ class wayfire_panel_focus : public wf::plugin_interface_t
                 current_focus_view = toplevel_focus_view;
                 toplevel_focus_view = nullptr;
             }
-        }
-    };
-
-    wf::signal::connection_t<wf::view_focus_request_signal> on_view_focus_request =
-        [=] (wf::view_focus_request_signal *ev)
-    {
-        if (ev->view && ev->view->role == wf::VIEW_ROLE_DESKTOP_ENVIRONMENT)
-        {
-            ev->carried_out = true;
         }
     };
 
@@ -221,7 +211,6 @@ class wayfire_panel_focus : public wf::plugin_interface_t
         on_key_event.disconnect();
         on_view_mapped.disconnect();
         on_view_unmapped.disconnect();
-        on_view_focus_request.disconnect();
     }
 };
 }
