@@ -3,7 +3,7 @@
 	<plugin name="panel-focus">
 		<_short>Panel Focus</_short>
 		<_long>A plugin to cycle through desktop panels.</_long>
-		<category>Desktop</category>
+		<category>Accessibility</category>
 		<option name="cycle" type="activator">
 			<_short>Cycle</_short>
 			<_long>Cycles through desktop panel focus.</_long>
@@ -13,6 +13,11 @@
 			<_short>Deactivate</_short>
 			<_long>Deactivates panel focus.</_long>
 			<default>&lt;ctrl&gt; &lt;alt&gt; KEY_ESC</default>
+		</option>
+		<option name="panel_focus_match" type="string">
+			<_short>Panel Focus Views</_short>
+			<_long>Criteria for views that the cycle activator will focus.</_long>
+			<default></default>
 		</option>
 	</plugin>
 </wayfire>

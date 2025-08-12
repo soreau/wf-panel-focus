@@ -23,6 +23,7 @@
  */
 
 #include <wayfire/plugin.hpp>
+#include <wayfire/matcher.hpp>
 #include <wayfire/toplevel-view.hpp>
 #include <wayfire/view-helpers.hpp>
 #include <wayfire/view-transform.hpp>
@@ -56,6 +57,7 @@ class wayfire_panel_focus : public wf::plugin_interface_t
 {
     wf::ipc_activator_t cycle{"panel-focus/cycle"};
     wf::ipc_activator_t deactivate{"panel-focus/deactivate"};
+    wf::view_matcher_t panel_focus_match{"panel-focus/panel_focus_match"};
     wayfire_view current_focus_view, toplevel_focus_view;
     bool panel_focus_active = false;
 
@@ -73,7 +75,8 @@ class wayfire_panel_focus : public wf::plugin_interface_t
         for (auto& view : wf::get_core().get_all_views())
         {
             if (view->role == wf::VIEW_ROLE_DESKTOP_ENVIRONMENT &&
-                wf::get_view_layer(view) > wf::scene::layer::WORKSPACE)
+                wf::get_view_layer(view) > wf::scene::layer::WORKSPACE &&
+                panel_focus_match.matches(view))
             {
                 ensure_transformer(view);
             }
@@ -136,7 +139,7 @@ class wayfire_panel_focus : public wf::plugin_interface_t
             wf::get_view_layer(ev->view) > wf::scene::layer::WORKSPACE)
         {
             ensure_transformer(ev->view);
-            wf::get_core().seat->focus_view(toplevel_focus_view);
+            wf::get_core().seat->refocus();
         }
     };
 
@@ -156,7 +159,7 @@ class wayfire_panel_focus : public wf::plugin_interface_t
         if (!toplevel_focus_view)
         {
             auto view = wf::get_core().seat->get_active_view();
-            if (view->role == wf::VIEW_ROLE_TOPLEVEL &&
+            if (view && view->role == wf::VIEW_ROLE_TOPLEVEL &&
                 wf::get_view_layer(view) == wf::scene::layer::WORKSPACE)
             {
                 toplevel_focus_view = view;
@@ -171,7 +174,7 @@ class wayfire_panel_focus : public wf::plugin_interface_t
             }
             if (view->role == wf::VIEW_ROLE_DESKTOP_ENVIRONMENT &&
                 wf::get_view_layer(view) > wf::scene::layer::WORKSPACE &&
-                focus_view_found)
+                focus_view_found && panel_focus_match.matches(view))
             {
                 pop_transformer(view);
                 wf::get_core().seat->focus_view(view);
@@ -186,7 +189,8 @@ class wayfire_panel_focus : public wf::plugin_interface_t
             for (auto& view : wf::get_core().get_all_views())
             {
                 if (view->role == wf::VIEW_ROLE_DESKTOP_ENVIRONMENT &&
-                    wf::get_view_layer(view) > wf::scene::layer::WORKSPACE)
+                    wf::get_view_layer(view) > wf::scene::layer::WORKSPACE &&
+                    panel_focus_match.matches(view))
                 {
                     pop_transformer(view);
                     wf::get_core().seat->focus_view(view);
