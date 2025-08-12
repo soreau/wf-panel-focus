@@ -25,6 +25,8 @@
 #include <wayfire/plugin.hpp>
 #include <wayfire/toplevel-view.hpp>
 #include <wayfire/view-helpers.hpp>
+#include <linux/input-event-codes.h>
+#include <wayfire/signal-definitions.hpp>
 #include <wayfire/plugins/ipc/ipc-activator.hpp>
 
 
@@ -33,7 +35,7 @@ namespace wf
 class wayfire_panel_focus : public wf::plugin_interface_t
 {
     wf::ipc_activator_t cycle{"panel-focus/cycle"};
-    wayfire_view current_focus_view;
+    wayfire_view current_focus_view, toplevel_focus_view;
 
   public:
 
@@ -41,12 +43,52 @@ class wayfire_panel_focus : public wf::plugin_interface_t
     {
         cycle.set_handler(cycle_panels);
         current_focus_view = wf::get_core().seat->get_active_view();
+        toplevel_focus_view = nullptr;
+        wf::get_core().connect(&on_key_event);
+        wf::get_core().connect(&on_view_mapped);
     }
+
+    wf::signal::connection_t<wf::input_event_signal<wlr_keyboard_key_event>> on_key_event =
+        [=] (wf::input_event_signal<wlr_keyboard_key_event> *ev)
+    {
+        if (!ev || !ev->event)
+        {
+            return;
+        }
+
+        if (ev->event->keycode == KEY_ESC && ev->event->state == WL_KEYBOARD_KEY_STATE_RELEASED)
+        {
+            if (toplevel_focus_view)
+            {
+                wf::get_core().seat->focus_view(toplevel_focus_view);
+                current_focus_view = toplevel_focus_view;
+                toplevel_focus_view = nullptr;
+            }
+        }
+    };
+
+    wf::signal::connection_t<wf::view_mapped_signal> on_view_mapped = [=] (wf::view_mapped_signal *ev)
+    {
+        if (ev && ev->view->role == wf::VIEW_ROLE_TOPLEVEL &&
+            wf::get_view_layer(ev->view) == wf::scene::layer::WORKSPACE)
+        {
+            toplevel_focus_view = ev->view;
+        }
+    };
 
     wf::ipc_activator_t::handler_t cycle_panels = [=] (wf::output_t *output, wayfire_view)
     {
         wayfire_view last_focus_view = current_focus_view;
         bool focus_view_found = false;
+        if (!toplevel_focus_view)
+        {
+            auto view = wf::get_core().seat->get_active_view();
+            if (view->role == wf::VIEW_ROLE_TOPLEVEL &&
+                wf::get_view_layer(view) == wf::scene::layer::WORKSPACE)
+            {
+                toplevel_focus_view = view;
+            }
+        }
         for (auto& view : wf::get_core().get_all_views())
         {
             if (view == current_focus_view && !focus_view_found)
@@ -85,6 +127,8 @@ class wayfire_panel_focus : public wf::plugin_interface_t
 
     void fini() override
     {
+        on_key_event.disconnect();
+        on_view_mapped.disconnect();
     }
 };
 }
