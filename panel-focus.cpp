@@ -46,6 +46,8 @@ class wayfire_panel_focus : public wf::plugin_interface_t
         toplevel_focus_view = nullptr;
         wf::get_core().connect(&on_key_event);
         wf::get_core().connect(&on_view_mapped);
+        wf::get_core().connect(&on_view_unmapped);
+        wf::get_core().connect(&on_button_event);
     }
 
     wf::signal::connection_t<wf::input_event_signal<wlr_keyboard_key_event>> on_key_event =
@@ -67,6 +69,16 @@ class wayfire_panel_focus : public wf::plugin_interface_t
         }
     };
 
+    wf::signal::connection_t<wf::input_event_signal<wlr_pointer_button_event>> on_button_event =
+        [=] (wf::input_event_signal<wlr_pointer_button_event> *ev)
+    {
+		auto view = wf::get_core().seat->get_active_view();
+        if (view->role == wf::VIEW_ROLE_DESKTOP_ENVIRONMENT)
+        {
+            wf::get_core().seat->focus_view(toplevel_focus_view);
+        }
+    };
+
     wf::signal::connection_t<wf::view_mapped_signal> on_view_mapped = [=] (wf::view_mapped_signal *ev)
     {
         if (ev && ev->view->role == wf::VIEW_ROLE_TOPLEVEL &&
@@ -74,6 +86,11 @@ class wayfire_panel_focus : public wf::plugin_interface_t
         {
             toplevel_focus_view = ev->view;
         }
+    };
+
+    wf::signal::connection_t<wf::view_unmapped_signal> on_view_unmapped = [=] (wf::view_unmapped_signal *ev)
+    {
+		toplevel_focus_view = wf::get_core().seat->get_active_view();
     };
 
     wf::ipc_activator_t::handler_t cycle_panels = [=] (wf::output_t *output, wayfire_view)
@@ -129,6 +146,8 @@ class wayfire_panel_focus : public wf::plugin_interface_t
     {
         on_key_event.disconnect();
         on_view_mapped.disconnect();
+        on_view_unmapped.disconnect();
+        on_button_event.disconnect();
     }
 };
 }
