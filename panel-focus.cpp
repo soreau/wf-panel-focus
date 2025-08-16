@@ -127,9 +127,22 @@ class wayfire_panel_focus : public wf::plugin_interface_t
         return false;
     };
 
+    wf::signal::connection_t<wf::view_activated_state_signal> on_view_activated_state_changed = [=] (wf::view_activated_state_signal *ev)
+    {
+        auto active_view = wf::get_core().seat->get_active_view();
+        if (active_view)
+        {
+            toplevel_focus_view = current_focus_view = active_view;
+        }
+    };
+
     wf::signal::connection_t<wf::view_mapped_signal> on_view_mapped = [=] (wf::view_mapped_signal *ev)
     {
-        if (ev && ev->view->role == wf::VIEW_ROLE_TOPLEVEL &&
+        if (!ev)
+        {
+            return;
+        }
+        if (ev->view->role == wf::VIEW_ROLE_TOPLEVEL &&
             wf::get_view_layer(ev->view) == wf::scene::layer::WORKSPACE &&
             panel_focus_active)
         {
@@ -141,6 +154,7 @@ class wayfire_panel_focus : public wf::plugin_interface_t
             ensure_transformer(ev->view);
             wf::get_core().seat->refocus();
         }
+        ev->view->connect(&on_view_activated_state_changed);
     };
 
     wf::signal::connection_t<wf::view_unmapped_signal> on_view_unmapped = [=] (wf::view_unmapped_signal *ev)
@@ -150,6 +164,7 @@ class wayfire_panel_focus : public wf::plugin_interface_t
             toplevel_focus_view = nullptr;
         }
         pop_transformer(ev->view);
+        ev->view->disconnect(&on_view_activated_state_changed);
     };
 
     wf::ipc_activator_t::handler_t cycle_panels = [=] (wf::output_t *output, wayfire_view)
